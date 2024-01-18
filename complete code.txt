@@ -1,0 +1,121 @@
+# Importing necessary libraries
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+from ydata_profiling import ProfileReport
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
+import dtale
+
+# Reading the Excel file
+AIQ = pd.read_excel("C:\\Users\\ROSHAN COMPUTERS\\Desktop\\Hyd.xlsx")
+
+# Displaying the first few rows of the dataframe
+AIQ.head()
+
+# Displaying unique values in the 'Month' column
+AIQ["Month"].unique()
+
+# Boxplot visualization
+sns.boxplot(AIQ[["Month", "Hour", "NowCast Conc."]])
+
+# Displaying column names
+AIQ.columns
+
+# Correlation heatmap
+corr_columns = ['NowCast Conc.', 'AQI', 'Year', 'Month', 'Day', 'Hour']
+sns.heatmap(AIQ[corr_columns].corr(), annot=True, cmap="YlGnBu")
+plt.savefig("Correlation", dpi=300)
+
+# Profiling the data
+Profile = ProfileReport(AIQ, title="Air Quality Index report", explorative=True)
+# Profile.to_file("Air Quality Index report.html")
+Profile
+
+# Data cleaning and outlier detection (NowCast Conc.)
+Q1 = AIQ['NowCast Conc.'].quantile(0.25)
+Q3 = AIQ['NowCast Conc.'].quantile(0.75)
+IQR = Q3 - Q1
+lower_bound = Q1 - 1.5 * IQR
+upper_bound = Q3 + 1.5 * IQR
+outliers = (AIQ["NowCast Conc."] < lower_bound) | (AIQ["NowCast Conc."] > upper_bound)
+AIQ.loc[outliers, "NowCast Conc."] = np.mean(AIQ["NowCast Conc."])
+
+# Data cleaning and outlier detection (AQI)
+Q1 = AIQ['AQI'].quantile(0.25)
+Q3 = AIQ['AQI'].quantile(0.75)
+IQR = Q3 - Q1
+lower_bound = Q1 - 1.5 * IQR
+upper_bound = Q3 + 1.5 * IQR
+outliers1 = (AIQ["AQI"] < lower_bound) | (AIQ["AQI"] > upper_bound)
+AIQ.loc[outliers1, "AQI"] = np.mean(AIQ["AQI"])
+
+# Boxplot visualization (NowCast Conc.)
+sns.boxplot(data=AIQ, x='NowCast Conc.')
+
+# Extracting relevant columns for further analysis
+a = AIQ[['NowCast Conc.', 'AQI']]
+
+# Descriptive statistics
+a.describe()
+
+# Scatterplot
+sns.scatterplot(x='NowCast Conc.', y='AQI', data=a)
+
+# Pairplot
+sns.pairplot(a)
+
+# Jointplot
+sns.jointplot(x='NowCast Conc.', y='AQI', data=a)
+
+# Profiling the cleaned and processed data
+Profile1 = ProfileReport(a, title="Air Quality Index report after cleaning", explorative=True)
+# Profile1
+
+# Linear Regression Model
+X = a[["NowCast Conc."]]
+Y = a[["AQI"]]
+
+# Splitting the data into training and testing sets
+X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.3, random_state=2)
+
+# Training the linear regression model
+lr = LinearRegression()
+lr.fit(X_train, Y_train)
+
+# Making predictions on the test set
+Y_train_pred = lr.predict(X_train)
+Y_test_pred = lr.predict(X_test)
+
+# Evaluating the model
+r2_train = r2_score(Y_train, Y_train_pred)
+r2_test = r2_score(Y_test, Y_test_pred)
+print(f"R-squared on the train set: {r2_train}")
+print(f"R-squared on the test set: {r2_test}")
+
+# Scatterplot of predictions vs. actual values
+sns.scatterplot(x=Y_test.values.flatten(), y=Y_test_pred.flatten())
+plt.xlabel("Actual AQI")
+plt.ylabel("Predicted AQI")
+plt.show()
+
+# Calculate evaluation metrics
+mae = mean_absolute_error(Y_test, Y_test_pred)
+mse = mean_squared_error(Y_test, Y_test_pred)
+rmse = np.sqrt(mse)
+print(f"Mean Absolute Error: {mae}")
+print(f"Mean Squared Error: {mae}")
+print(f"Root Mean Squared Error: {mae}")
+
+# Histogram Plot using Seaborn for predicted values
+x = Y_test.values.flatten()
+y = Y_test_pred.flatten()
+sns.histplot(y, kde=True)
+
+# D-Tale generates an interactive dashboard
+dtale.show(AIQ)
+
+# Predict using the trained model
+lr.predict([[62]])
